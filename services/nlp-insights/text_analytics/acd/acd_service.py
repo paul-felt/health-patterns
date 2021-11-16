@@ -55,16 +55,25 @@ class ACDService(NLPService):
         )
         service.set_service_url(self.acd_url)
         logger.info("Calling ACD-" + self.config_name)
-        resp = service.analyze_with_flow(self.acd_flow, text)
-        out = resp.to_dict()
+        # resp = service.analyze_with_flow(self.acd_flow, text)
+        # out = resp.to_dict()
+        # TODONOW: service.analyze_with_flow doesn't return sentences, lines, paragraphs
+        resp = service.analyze_with_flow_org(self.acd_flow, text)
+        out = resp.result['unstructured'][0]['data']
+
+        # Do a little work to flesh out sentence covered texts
+        for sent in out['sentences']:
+            begin, end = sent['begin'], sent['end']
+            sent['coveredText'] = text[begin:end]
+
         return out
 
-    def add_medications(self, nlp, diagnostic_report, nlp_output, med_statements_found, med_statements_insight_counter):
+    def add_medications(self, nlp, diagnostic_report, nlp_output, med_statements_found, med_statements_insight_counter, span_to_medref):
         medications = nlp_output.get('MedicationInd', [])
         med_statements_found = {}
         med_statements_insight_counter = {}
         for medication in medications:
-            med_statements_found, med_statements_insight_counter = create_insight(medication, nlp, nlp_output, diagnostic_report, ACDService.build_medication, med_statements_found, med_statements_insight_counter)
+            med_statements_found, med_statements_insight_counter = create_insight(medication, nlp, nlp_output, diagnostic_report, ACDService.build_medication, med_statements_found, med_statements_insight_counter, span_to_medref)
 
         return med_statements_found, med_statements_insight_counter
 
